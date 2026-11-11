@@ -122,5 +122,53 @@ class local_chuspasocial_generator extends component_generator_base {
 
         return $comment;
     }
-}
 
+    /**
+     * Creates a listing course for testing.
+     *
+     * @param array $record Listing course data.
+     * @return \local_chuspasocial\local\persistent\listing_course
+     */
+    public function create_listing_course(array $record = []): \local_chuspasocial\local\persistent\listing_course {
+        global $DB;
+
+        if (empty($record['courseid'])) {
+            $course = $this->datagenerator->create_course();
+            $record['courseid'] = $course->id;
+        }
+
+        // El userid solo sirve para crear el anuncio; no es propiedad de listing_course.
+        $userid = $record['userid'] ?? null;
+        unset($record['userid']);
+
+        if (empty($record['listingid'])) {
+            if (empty($userid)) {
+                $user = $this->datagenerator->create_user();
+                $userid = $user->id;
+            }
+
+            // Datos propios del anuncio, separados de los de la relación.
+            $listingdata = (object) [
+                'userid' => $userid,
+                'title' => 'Anuncio de prueba',
+                'author' => 'Autor de prueba',
+                'timecreated' => time(),
+                'timemodified' => time(),
+            ];
+
+            $record['listingid'] = $DB->insert_record('local_chuspasocial_listing', $listingdata);
+        }
+
+        // Solo propiedades de la relación listing_course.
+        $listingcoursedata = [
+            'listingid' => $record['listingid'],
+            'courseid' => $record['courseid'],
+            'timecreated' => $record['timecreated'] ?? time(),
+        ];
+
+        $listingcourse = new \local_chuspasocial\local\persistent\listing_course(0, (object) $listingcoursedata);
+        $listingcourse->create();
+
+        return $listingcourse;
+    }
+}
